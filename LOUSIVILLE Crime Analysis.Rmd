@@ -1,0 +1,1228 @@
+---
+title: "Crime Prediction In Louisville Dataset"
+author: "Vinay Vaida"
+
+output:
+  word_document: default
+  html_document:
+    df_print: kable
+---
+#Calling Louisville Crime Dataset
+```{r}
+CrimeData <-read.csv('C:\\Users\\vinay\\OneDrive\\Documents\\Applied Stats\\Project\\dataset 2023\\Louisville_Metro_KY_-_Crime_Data_2023.csv', header=TRUE,stringsAsFactors=FALSE)
+summary(CrimeData)
+
+```
+#DATA CLEANING for Louisville Crime Dataset
+```{r}
+library(tidyr)
+
+CrimeData <- separate(CrimeData, Offense_Classification, into = c("Offense_Classification_Number", "Offense_Classification_Type"), sep = " ", remove = FALSE)
+CrimeData <- separate(CrimeData, Date_Occurred, into = c("Occurred_Date", "Occurred_Time"), sep = " ", remove = FALSE)
+CrimeData <- CrimeData[CrimeData$City == "LOUISVILLE", ]
+CrimeData$Zip_Code <- gsub(" 0+$", "", CrimeData$Zip_Code)
+unique_values <- unique(CrimeData$NIBRS_Code)
+print(unique_values)
+head(CrimeData)
+Beat411=CrimeData
+```
+#Classification of Crime
+
+Serious Crime: Serious crimes typically refer to offenses that are considered more severe or significant in terms of their potential impact on individuals and society. They often result in more severe legal consequences. Serious crimes can include both violent and non-violent offenses, such as murder, robbery, sexual assault, burglary, arson, kidnapping, and terrorism.
+
+Violent Crime: Violent crimes are a subset of serious crimes that specifically involve the use of force or the threat of force against another person, resulting in physical harm or the fear of harm. Examples of violent crimes include assault, battery, homicide, domestic violence, and sexual assault.
+Classifying Crimes and Identifying Patterns.
+
+#Modeling Crime
+
+Offense Category	Offense Code	Crime Against
+
+Serious Crimes:-	
+Counterfeiting/Forgery (Property)	250	Property
+Destruction/Damage/Vandalism...	290	Property
+Drug/Narcotic Violations (Society)	35A	Society
+Drug Equipment Violations (Society)	35B	Society
+Embezzlement (Property)	270	Property
+Extortion/Blackmail (Property)	210	Property
+Fraud Offenses		Property
+- False Pretenses/Swindle...	26A	Property
+- Credit Card/Automated...	26B	Property
+- Impersonation	26C	Property
+- Welfare Fraud	26D	Property
+- Wire Fraud	26E	Property
+Gambling Offenses (Society)	39A, 39B, 39C, 39D	Society
+Larceny/Theft Offenses		Property
+- Pocket-picking	23A	Property
+- Purse-snatching	23B	Property
+- Shoplifting	23C	Property
+- Theft From Building	23D	Property
+- Theft From Coin-Operated...	23E	Property
+- Theft From Motor Vehicle	23F	Property
+- Theft of Motor Vehicle Parts...	23G	Property
+- All Other Larceny	23H	Property
+Motor Vehicle Theft (Property)	240	Property
+Pornography/Obscene Material (Society)	370	Society
+Robbery (Property)	120	Property
+Stolen Property Offenses (Property)	280	Property
+
+Violent Crimes:-	
+Homicide Offenses		Person (Violent Crime)
+- Murder & Nonnegligent Manslaughter	09A	Person (Violent Crime)
+- Negligent Manslaughter	09B	Person (Violent Crime)
+- Justifiable Homicide	09C	Person (Violent Crime)
+Kidnapping/Abduction (Person)	100	Person (Violent Crime)
+Robbery (Property)	120	Property
+Simple Assault (Person)	13B	Person (Violent Crime)
+Intimidation (Person)	13C	Person (Violent Crime)
+Sex Offenses, Forcible		Person (Violent Crime)
+- Forcible Rape	11A	Person (Violent Crime)
+- Forcible Sodomy	11B	Person (Violent Crime)
+- Sexual Assault With An Object	11C	Person (Violent Crime)
+- Forcible Fondling	11D	Person (Violent Crime)
+Sex Offenses, Nonforcible		Person
+- Incest	36A	Person
+- Statutory Rape	36B	Person
+Prostitution Offenses (Society)	40A, 40B	Society
+Weapon Law Violations (Society)	520	Society
+
+#MODELING OF CRIME
+```{r}
+library(dplyr)
+
+CrimeData <- CrimeData %>%
+  mutate(
+    Serious_Crime = ifelse(NIBRS_Code %in% c("250", "290", "35A", "35B", "270", "210", "64A","720",
+                                             "26A", "26B", "26C", "26D", "26E", "39A", "39B", "39C", "39D", 
+                                             "23A", "23B", "23C", "23D", "23E", "23F", "23G", "23H", "240", "370", "280"), 1, 0),
+    Violent_Crime = ifelse(NIBRS_Code %in% c("09A", "09B", "09C", "100", "120", "13A","13B", "13C","90F","90J","90C", "90D","90H", "90E","510","200","90B",
+                                             "11A", "11B", "11C", "11D", "36A", "36B", "220", "520","90Z","999",
+                                             "40A", "40B"), 1, 0)
+  )
+
+#Print the modified dataframe
+head(CrimeData)
+Beat411=CrimeData
+
+```
+#Dropping Unsed Coloumns in CrimeData DATSET
+```{r}
+library(dplyr)
+columns_to_drop <- c("Incident_Number", "Date_Occurred","Occurred_Time", 
+                      "Offense_Classification", "Offense_Classification_Type","Location_Category" ,"Badge_ID","NIBRS_Group","Offense_Classification_Number","ObjectId","LMPD_Beat",
+                      "Offense_Code_Name", "LMPD_Division", "Block_Address", "City")
+
+CrimeData <- CrimeData %>%
+  select(-any_of(columns_to_drop))
+
+CrimeData <- CrimeData %>%
+  arrange(Occurred_Date)
+head(CrimeData)
+```
+#CALLING THE TEMPERATURE DATASET
+```{r}
+TempData <-read.csv('C:\\Users\\vinay\\OneDrive\\Documents\\Applied Stats\\Project\\tempearature DataSet\\Louisville 2023-01-01 to 2023-09-16.csv', header=TRUE,stringsAsFactors=FALSE)
+
+TempData <- TempData %>%
+  mutate(datetime = as.Date(datetime, format = "%Y-%m-%d"),
+         datetime = format(datetime, "%Y/%m/%d"))
+
+TempData <- TempData %>%
+  select(-tempmax, -tempmin, -feelslikemax, -feelslikemin, -feelslike, -dew, -precipprob, -precipcover,
+         -snowdepth, -windgust, -windspeed, -winddir, -sealevelpressure,
+         -cloudcover, -solarradiation, -solarenergy, -uvindex,
+         -severerisk, -sunrise, -sunset, -moonphase, -conditions,-name,-stations,-icon,-description)
+
+head(TempData,10)
+
+
+```
+#Merging Datasets based on the crime occurance date using left join
+```{r}
+
+TempData_renamed <- TempData %>%
+  rename(
+    temp.x = temp,
+    humidity.x = humidity,
+    precip.x = precip,
+    visibility.x = visibility
+  )
+
+CrimeData$Occurred_Date <- as.Date(CrimeData$Occurred_Date)
+TempData$datetime <- as.Date(TempData$datetime)
+
+CrimeData <- left_join(CrimeData, TempData, by = c("Occurred_Date" = "datetime"))
+head(CrimeData)
+
+```
+#Incorparating public Holiday for better analysis
+```{r}
+
+CrimeData$Occurred_Date <- as.Date(CrimeData$Occurred_Date)
+
+
+public_holidays <- as.Date(c("2023-01-02", "2023-01-16", "2023-04-07", "2023-05-29", "2023-06-19", "2023-07-04", "2023-09-04"))
+
+
+CrimeData$Public_Holiday <- ifelse(CrimeData$Occurred_Date %in% public_holidays, 1, 0)
+
+#Adding new feature WEEKENDS
+CrimeData$Weekend <- ifelse(weekdays(CrimeData$Occurred_Date) %in% c("Saturday", "Sunday"), 1, 0)
+
+cd1 <- CrimeData
+head(CrimeData)
+
+write.csv(CrimeData, file = "BeforeCrimeData.csv", row.names = FALSE)
+```
+
+#TRANSFORMING THE DATASETS
+```{r}
+summarized_data <- CrimeData %>%
+  group_by(Occurred_Date) %>%
+  summarise(
+    Sum_Serious_Crime = sum(Serious_Crime, na.rm = TRUE),
+    Sum_Violent_Crime = sum(Violent_Crime, na.rm = TRUE),
+    Temp = first(temp),  # Assuming temperature is constant for a given date
+    Preciptype=first(preciptype),
+    Snow=first(snow),
+    Weekend=max(Weekend),
+    Humidity = first(humidity),  # Assuming humidity is constant for a given date
+    Precip = first(precip),  # Assuming precipitation is constant for a given date
+    Visibility = first(visibility),  # Assuming visibility is constant for a given date
+    Public_Holiday = max(Public_Holiday),  # Assuming Public_Holiday is a binary indicator (0 or 1)
+    Was_Offense_Completed_Yes = sum(Was_Offense_Completed == "Yes"),
+    Was_Offense_Completed_No = sum(Was_Offense_Completed == "No")
+  )
+#calculating Total Crime 
+summarized_data$Total_Crime <- summarized_data$Sum_Serious_Crime + summarized_data$Sum_Violent_Crime
+
+summary(summarized_data)
+
+#Print the updated data frame
+head(summarized_data,20)
+
+sarimadf=summarized_data
+RidgeDF=summarized_data
+
+write.csv(summarized_data, file = "CDSum.csv", row.names = FALSE)
+```
+```{r}
+head(Beat411)
+```
+
+#Creating new database from CrimeData for speific Location Beat 411
+```{r}
+Beat411$Occurred_Date <- as.Date(Beat411$Occurred_Date)
+Beat411 <- Beat411 %>%
+  arrange(Occurred_Date)
+Beat411 <-  left_join(Beat411, TempData, by = c("Occurred_Date" = "datetime"))
+Beat411 <- Beat411[Beat411$LMPD_Beat == "411", ]
+Beat411 <- Beat411 %>%
+  select(-Date_Occurred,-Offense_Classification,-Incident_Number,-Offense_Code_Name,-Block_Address,-City,-ObjectId,-preciptype)
+Beat411 <- Beat411 %>%
+  group_by(Occurred_Date) %>%
+  summarise(
+    Sum_Serious_Crime = sum(Serious_Crime, na.rm = TRUE),
+    Sum_Violent_Crime = sum(Violent_Crime, na.rm = TRUE),
+    Temp = first(temp),  # Corrected spelling here
+    Snow = first(snow),
+    Humidity = first(humidity),  # Assuming humidity is constant for a given date
+    Precip = first(precip),  # Assuming precipitation is constant for a given date
+    Visibility = first(visibility),  # Assuming Public_Holiday is a binary indicator (0 or 1)
+    Was_Offense_Completed_Yes = sum(Was_Offense_Completed == "Yes"),
+    Was_Offense_Completed_No = sum(Was_Offense_Completed == "No")
+  )
+Beat411$Total_Crime <- Beat411$Sum_Serious_Crime + Beat411$Sum_Violent_Crime
+Beat411$Weekend <- ifelse(weekdays(Beat411$Occurred_Date) %in% c("Saturday", "Sunday"), 1, 0)
+head(Beat411)
+```
+#Exploratory Data Analysis (EDA):
+
+
+A)Correlation plot
+```{r}
+library(corrplot)
+
+subset_data <- summarized_data[, c("Was_Offense_Completed_Yes", 
+                                   "Was_Offense_Completed_No",
+                                   "Temp", "Precip", "Humidity","Snow" ,
+                                   "Visibility", "Public_Holiday","Weekend","Sum_Serious_Crime","Sum_Violent_Crime","Total_Crime")]
+
+subset_data_numeric <- subset_data[, sapply(subset_data, is.numeric)]
+
+cor_matrix <- cor(subset_data_numeric, use = "complete.obs")
+
+par(mar = c(5, 5, 5, 5))
+
+corrplot(cor_matrix, method = "circle", type = "upper", 
+         tl.col = "black", tl.srt = 45, tl.cex = 0.7, 
+         cl.cex = 0.7, cl.ratio = 0.1, 
+         col = colorRampPalette(c("#D73027", "white", "#4575B4"))(200), 
+         addCoef.col = "black", diag = FALSE)
+
+par(mar = c(5, 4, 4, 2) + 0.1)
+
+```
+
+#B.Crime Trends
+```{r}
+
+library(ggplot2)
+library(dplyr)
+
+if ('Weekend' %in% colnames(summarized_data)) {
+  summarized_data$Occurred_Date <- as.Date(summarized_data$Occurred_Date)
+
+  conditions <- list(
+    weekend = summarized_data[summarized_data$Weekend == 1, ],
+    holiday = summarized_data[summarized_data$Public_Holiday == 1, ],
+    rain = summarized_data[summarized_data$Preciptype == 'rain', ],
+    no_rain = summarized_data[summarized_data$Preciptype != 'rain', ]
+  )
+
+  plot_trends <- function(df, title) {
+    ggplot(df, aes(x = Occurred_Date)) +
+      geom_line(aes(y = Sum_Serious_Crime, color = 'Serious Crime'), size = 1) +
+      geom_line(aes(y = Sum_Violent_Crime, color = 'Violent Crime'), size = 1) +
+      labs(title = title, x = 'Date', y = 'Number of Crimes') +
+      theme_minimal() +
+      scale_color_manual(values = c('Serious Crime' = 'blue', 'Violent Crime' = 'red'))
+  }
+
+  plot_trends(conditions$no_rain, 'Crime Trends on Non-Rainy Days')
+} else {
+  cat("Column 'Weekend' not found in the dataframe.")
+}
+```
+
+
+
+
+#c) CRIME ANALYSIS ON HOLIDAYS
+
+```{r}
+
+CrimeData$Occurred_Date <- as.Date(CrimeData$Occurred_Date)
+
+public_holidays <- as.Date(c("2023-01-02", "2023-01-16", "2023-04-07", "2023-05-29", "2023-06-19", "2023-07-04", "2023-09-04"))
+
+CrimeData$Public_Holiday <- as.integer(CrimeData$Occurred_Date %in% public_holidays)
+
+crime_counts <- list(
+  holidays = colSums(subset(CrimeData, Public_Holiday == 1)[c("Serious_Crime", "Violent_Crime")]),
+  non_holidays = colSums(subset(CrimeData, Public_Holiday == 0)[c("Serious_Crime", "Violent_Crime")])
+)
+
+total_counts <- c(holidays = nrow(subset(CrimeData, Public_Holiday == 1)),
+                  non_holidays = nrow(subset(CrimeData, Public_Holiday == 0)))
+library(ggplot2)
+
+
+
+plots <- lapply(unique(crime_counts$Holiday_Status), function(status) {
+  ggplot(subset(crime_counts, Holiday_Status == status), 
+         aes(x = Category, y = Count, fill = Category)) +
+    geom_bar(stat = "identity", color = "black") +
+    labs(title = paste("Crime Counts on", status),
+         x = "Crime Category",
+         y = "Crime Count",
+         fill = "Crime Category") +
+    theme_minimal()
+})
+
+ # Plot for Non-Holidays
+#crime_counts <- data.frame(Category = rep(c("Serious Crime", "Violent Crime"), each = 2), Holiday_Status = rep(c("Holidays", "Non-Holidays"), times = 2),Count = c(serious_crime_holidays, serious_crime_non_holidays, violent_crime_holidays, violent_crime_non_holidays))
+cat("Total Crime Counts on Holidays:", total_counts["holidays"], "\n")
+cat("Total Crime Counts on Non-Holidays:", total_counts["non_holidays"], "\n")
+
+cat("Serious Crime Counts on Holidays:", crime_counts$holidays[1], "\n")
+cat("Serious Crime Counts on Non-Holidays:", crime_counts$non_holidays[1], "\n")
+
+cat("Violent Crime Counts on Holidays:", crime_counts$holidays[2], "\n")
+cat("Violent Crime Counts on Non-Holidays:", crime_counts$non_holidays[2], "\n")
+```
+#D) Distribution of Incident Dates
+
+```{r}
+
+# Load required libraries
+library(dplyr)
+library(ggplot2)
+
+# 1. Temporal Trends
+cd1$Day_of_Week <- factor(weekdays(cd1$Occurred_Date), levels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+cd1$Month <- factor(months(cd1$Occurred_Date), levels = month.name)
+
+# Count incidents by day of the week and by month
+day_of_week_counts <- table(cd1$Day_of_Week)
+month_counts <- table(cd1$Month)
+
+# Plotting day of the week counts
+ggplot(data = data.frame(day = names(day_of_week_counts), count = as.numeric(day_of_week_counts)),
+       aes(x = day, y = count, fill = day)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Incidents by Day of the Week", x = "Day of the Week", y = "Count") +
+  theme_minimal()
+
+# Plotting month counts
+ggplot(data = data.frame(month = names(month_counts), count = as.numeric(month_counts)),
+       aes(x = month, y = count, fill = month)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Incidents by Month", x = "Month", y = "Count") +
+  scale_x_discrete(limits = month.name) +  # Ensure months are in order
+  theme_minimal()
+
+# 2. Most and Least Common Offenses
+most_common_offenses <- head(sort(table(cd1$NIBRS_Code), decreasing = TRUE), 5)
+least_common_offenses <- tail(sort(table(cd1$NIBRS_Code), decreasing = TRUE), 5)
+
+# 3. Proportion of Serious and Violent Crimes
+serious_crime_proportion <- table(cd1$Serious_Crime) / sum(table(cd1$Serious_Crime))
+violent_crime_proportion <- table(cd1$Violent_Crime) / sum(table(cd1$Violent_Crime))
+
+# 4. Geographical Hotspots
+top_zip_codes <- head(sort(table(cd1$Zip_Code), decreasing = TRUE), 5)
+bottom_zip_codes <- tail(sort(table(cd1$Zip_Code), decreasing = TRUE), 5)
+
+# Plotting top zip codes
+ggplot(data = data.frame(zip_code = names(top_zip_codes), count = as.numeric(top_zip_codes)),
+       aes(x = reorder(zip_code, -count), y = count, fill = zip_code)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Top 5 Zip Codes with Highest Crime Rates", x = "Zip Code", y = "Count") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Plotting bottom zip codes
+ggplot(data = data.frame(zip_code = names(bottom_zip_codes), count = as.numeric(bottom_zip_codes)),
+       aes(x = reorder(zip_code, count), y = count, fill = zip_code)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Top 5 Zip Codes with Lowest Crime Rates", x = "Zip Code", y = "Count") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# 5. Correlations with Weather Conditions
+weather_columns <- c('temp.x', 'humidity.x', 'precip.x', 'visibility.x')
+
+# 6. Impact of Public Holidays on Crime Rates
+public_holiday_crime_count <- cd1 %>% group_by(Public_Holiday) %>% summarize(Count = n())
+
+# Define the labels
+labels <- c(
+  "90Z All Other Offenses",
+  "240 Motor Vehicle Theft",
+  "290 Destruction/Damage/Vandalism of Property",
+  "13B Simple Assault",
+  "23H All Other Larceny"
+)
+
+#7. Most Common Offenses
+most_common_plot <- ggplot(data = data.frame(NIBRS_Code = names(most_common_offenses), Frequency = as.numeric(most_common_offenses)),
+                           aes(x = reorder(NIBRS_Code, Frequency), y = Frequency, fill = Frequency)) +
+  geom_bar(stat = "identity") +
+  scale_fill_gradient(low = "blue", high = "red") +
+  labs(title = 'Most Common Offenses (Top 5 NIBRS Codes)',
+       x = 'NIBRS Code', y = 'Frequency') +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_x_discrete(labels = labels)
+
+print(most_common_plot)
+
+if (exists("correlations_with_weather")) {
+  findings_summary <- list(
+    "Temporal Trends" = list(
+      "Day of Week Counts" = day_of_week_counts,
+      "Month Counts" = month_counts
+    ),
+    "Common Offenses" = list(
+      "Most Common" = most_common_offenses,
+      "Least Common" = least_common_offenses
+    ),
+    "Crime Proportions" = list(
+      "Serious Crime" = serious_crime_proportion,
+      "Violent Crime" = violent_crime_proportion
+    ),
+    "Geographical Hotspots" = list(
+      "Top Zip Codes" = top_zip_codes,
+      "Bottom Zip Codes" = bottom_zip_codes
+    ),
+    "Weather Correlations" = correlations_with_weather,
+    "Public Holiday Impact" = public_holiday_crime_count$Count
+  )
+} else {
+  # 'correlations_with_weather' doesn't exist
+  findings_summary <- list(
+    "Temporal Trends" = list(
+      "Day of Week Counts" = day_of_week_counts,
+      "Month Counts" = month_counts
+    ),
+    "Common Offenses" = list(
+      "Most Common" = most_common_offenses,
+      "Least Common" = least_common_offenses
+    ),
+    "Crime Proportions" = list(
+      "Serious Crime" = serious_crime_proportion,
+      "Violent Crime" = violent_crime_proportion
+    ),
+    "Geographical Hotspots" = list(
+      "Top Zip Codes" = top_zip_codes,
+      "Bottom Zip Codes" = bottom_zip_codes
+    ),
+    "Public Holiday Impact" = public_holiday_crime_count$Count
+  )
+}
+
+# Displaying findings
+findings_summary
+
+```
+
+#MACHINE LEARNING MODELS
+
+LINEAR REGRESSION
+
+#Serious Crime linear model
+```{r}
+library(olsrr)
+summarized_data$Days_Since_Start <- as.numeric(difftime(summarized_data$Occurred_Date, min(summarized_data$Occurred_Date), units = "days"))
+
+
+# Split the dataset into training and testing sets
+set.seed(42)  # Set seed for reproducibility
+train_indices <- sample(1:nrow(summarized_data), 0.8 * nrow(summarized_data))
+train_data <- summarized_data[train_indices, ]
+test_data <- summarized_data[-train_indices, ]
+
+# Create and train the linear regression model
+model <- lm(formula = paste('Sum_Serious_Crime', "~", 'Days_Since_Start + Temp + Humidity + Precip + Visibility + Public_Holiday + Snow + Was_Offense_Completed_Yes + Was_Offense_Completed_No'), data = train_data)
+
+
+# Predictions on the test set
+y_pred <- predict(model, newdata = test_data)
+
+# Calculate Mean Squared Error (MSE)
+mse <- mean((y_pred - test_data$Sum_Serious_Crime)^2)
+
+# Calculate R-squared (R2)
+residuals <- y_pred - test_data$Sum_Serious_Crime
+ss_residual <- sum(residuals^2)
+ss_total <- sum((test_data$Sum_Serious_Crime - mean(test_data$Sum_Serious_Crime))^2)
+r2 <- 1 - (ss_residual / ss_total)
+
+cat("Mean Squared Error (MSE):", mse, "\n")
+cat("R-squared (R2):", r2, "\n")
+summary(model)
+layout(matrix(c(1, 2, 3, 4), nrow = 2, byrow = TRUE))
+plot(model)
+
+
+plot(test_data$Sum_Violent_Crime, y_pred, main = "Actual vs Predicted Values",
+     xlab = "Actual Sum_Violent_Crime", ylab = "Predicted Sum_Violent_Crime", pch = 16, col = "blue")
+
+# Add a diagonal line for reference (perfect predictions)
+abline(a = 0, b = 1, col = "red")
+
+# Add a legend
+legend("topleft", legend = "Perfect Prediction", col = "red", pch = 16)
+
+
+```
+
+
+
+#Violent Crime Linear regression model
+```{r}
+# Create and train the linear regression model
+model <- lm(formula = paste('Sum_Violent_Crime', "~", 'Days_Since_Start + Temp + Humidity + Precip + Visibility + Public_Holiday + Snow + Was_Offense_Completed_Yes + Was_Offense_Completed_No'), data = train_data)
+
+
+# Predictions on the test set
+y_pred <- predict(model, newdata = test_data)
+
+# Calculate Mean Squared Error (MSE)
+mse <- mean((y_pred - test_data$Sum_Violent_Crime)^2)
+
+# Calculate R-squared (R2)
+residuals <- y_pred - test_data$Sum_Violent_Crime
+ss_residual <- sum(residuals^2)
+ss_total <- sum((test_data$Sum_Violent_Crime - mean(test_data$Sum_Violent_Crime))^2)
+r2 <- 1 - (ss_residual / ss_total)
+
+cat("Mean Squared Error (MSE):", mse, "\n")
+cat("R-squared (R2):", r2, "\n")
+summary(model)
+layout(matrix(c(1, 2, 3, 4), nrow = 2, byrow = TRUE))
+plot(model)
+
+
+```
+
+#LINEAR REGRESSION FOR TOTAL CRIME
+```{r}
+library(olsrr)
+summarized_data$Days_Since_Start <- as.numeric(difftime(summarized_data$Occurred_Date, min(summarized_data$Occurred_Date), units = "days"))
+
+
+# Split the dataset into training and testing sets
+set.seed(42)  # Set seed for reproducibility
+train_indices <- sample(1:nrow(summarized_data), 0.8 * nrow(summarized_data))
+train_data <- summarized_data[train_indices, ]
+test_data <- summarized_data[-train_indices, ]
+
+# Create and train the linear regression model
+model <- lm(formula = paste('Total_Crime', "~", 'Days_Since_Start + Temp + Humidity + Precip + Visibility + Public_Holiday + Snow + Was_Offense_Completed_Yes + Was_Offense_Completed_No'), data = train_data)
+
+
+# Predictions on the test set
+y_pred <- predict(model, newdata = test_data)
+
+# Calculate Mean Squared Error (MSE)
+mse <- mean((y_pred - test_data$Total_Crime)^2)
+
+# Calculate R-squared (R2)
+residuals <- y_pred - test_data$Total_Crime
+ss_residual <- sum(residuals^2)
+ss_total <- sum((test_data$Total_Crime - mean(test_data$Total_Crime))^2)
+r2 <- 1 - (ss_residual / ss_total)
+
+cat("Mean Squared Error (MSE):", mse, "\n")
+cat("R-squared (R2):", r2, "\n")
+summary(model)
+layout(matrix(c(1, 2, 3, 4), nrow = 2, byrow = TRUE))
+plot(model)
+```
+
+#USING LINEAR REGRESSION PREDICTING THE CRIME COUNT ON SPECIFIC DATE
+```{r}
+
+summarized_data$Days_Since_Start <- as.numeric(difftime(summarized_data$Occurred_Date, min(summarized_data$Occurred_Date), units = "days"))
+
+# Selecting independent variables for the model
+independent_vars <- c("Days_Since_Start", "Temp", "Humidity", "Precip", "Visibility", "Public_Holiday", "Snow", "Was_Offense_Completed_Yes", "Was_Offense_Completed_No")
+
+# Dependent variables
+dependent_vars <- c('Sum_Serious_Crime', 'Sum_Violent_Crime')
+
+# Split the dataset into training and testing sets
+set.seed(42)  # Set seed for reproducibility
+train_indices <- sample(1:nrow(summarized_data), 0.8 * nrow(summarized_data))
+train_data <- summarized_data[train_indices, ]
+test_data <- summarized_data[-train_indices, ]
+
+
+# Create and train the linear regression models
+models <- lapply(dependent_vars, function(dep_var) {
+  model <- lm(formula(paste(dep_var, "~", paste(independent_vars, collapse = " + "))), data = train_data)
+  return(model)
+})
+
+prediction_date <- as.Date('2023-01-01')
+# Calculate the number of days since the start of the dataset for the prediction date
+days_since_start <- as.numeric(difftime(prediction_date, min(summarized_data$Occurred_Date), units = "days"))
+
+# Since we don't have future weather data or other variables, we'll have to make assumptions.
+# One approach is to use the mean values of the weather variables and other conditions from the dataset.
+mean_values <- colMeans(subset(summarized_data, select = independent_vars), na.rm = TRUE)
+
+# Update the 'Days_Since_Start' for the prediction date
+mean_values['Days_Since_Start'] <- days_since_start
+
+# Reshape for a single prediction
+prediction_input <- as.data.frame(t(mean_values))
+
+# Predicting the crime for the specified date
+predicted_crime <- lapply(models, function(model) {
+  predict(model, newdata = prediction_input)
+})
+
+# Display the predictions
+for (i in seq_along(dependent_vars)) {
+  cat(paste("Predicted",dependent_vars[i], "on",prediction_date , ":", predicted_crime[[i]], "\n"))
+}
+
+cat("\n")
+```
+
+
+```{r}
+
+# Assuming you have already loaded required libraries like ggplot2
+
+# Add the Days_Since_Start variable to the dataset
+summarized_data$Days_Since_Start <- as.numeric(difftime(summarized_data$Occurred_Date, min(summarized_data$Occurred_Date), units = "days"))
+
+# Selecting independent variables for the model
+independent_vars <- c("Days_Since_Start", "Temp", "Humidity", "Precip", "Visibility", "Public_Holiday", "Snow", "Was_Offense_Completed_Yes", "Was_Offense_Completed_No")
+
+# Dependent variables
+dependent_vars <- c('Sum_Serious_Crime', 'Sum_Violent_Crime')
+
+# Split the dataset into training and testing sets
+set.seed(42)  # Set seed for reproducibility
+train_indices <- sample(1:nrow(summarized_data), 0.8 * nrow(summarized_data))
+train_data <- summarized_data[train_indices, ]
+test_data <- summarized_data[-train_indices, ]
+
+# Create and train the linear regression models
+models <- lapply(dependent_vars, function(dep_var) {
+  model <- lm(formula(paste(dep_var, "~", paste(independent_vars, collapse = " + "))), data = train_data)
+  return(model)
+})
+
+# Specify the prediction date
+prediction_date <- as.Date('2023-01-01')
+
+# Calculate the number of days since the start of the dataset for the prediction date
+days_since_start <- as.numeric(difftime(prediction_date, min(summarized_data$Occurred_Date), units = "days"))
+
+# Since we don't have future weather data or other variables, we'll have to make assumptions.
+# One approach is to use the mean values of the weather variables and other conditions from the dataset.
+mean_values <- colMeans(subset(summarized_data, select = independent_vars), na.rm = TRUE)
+
+# Update the 'Days_Since_Start' for the prediction date
+mean_values['Days_Since_Start'] <- days_since_start
+
+# Reshape for a single prediction
+prediction_input <- as.data.frame(t(mean_values))
+
+# Predicting the crime for the specified date
+predicted_crime <- lapply(models, function(model) {
+  predict(model, newdata = prediction_input)
+})
+
+# Display the predictions
+for (i in seq_along(dependent_vars)) {
+  cat(paste("Predicted", dependent_vars[i], "on", prediction_date, ":", predicted_crime[[i]], "\n"))
+}
+
+# Make predictions on the test dataset
+test_predictions <- lapply(models, function(model) {
+  predict(model, newdata = test_data)
+})
+
+# Create a data frame for actual vs. predicted values
+comparison_data <- data.frame(
+  Actual_Serious_Crime = test_data$Sum_Serious_Crime,
+  Actual_Violent_Crime = test_data$Sum_Violent_Crime,
+  Predicted_Serious_Crime = test_predictions[[1]],
+  Predicted_Violent_Crime = test_predictions[[2]]
+)
+
+# Print actual vs. predicted values
+print("Actual vs. Predicted Values:")
+print(head(comparison_data))
+
+# Plot actual vs. predicted values
+library(ggplot2)
+
+ggplot(comparison_data, aes(x = Actual_Serious_Crime, y = Predicted_Serious_Crime)) +
+  geom_point(color = "blue") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "red") +
+  labs(title = "Actual vs. Predicted Serious Crime",
+       x = "Actual Serious Crime",
+       y = "Predicted Serious Crime")
+
+ggplot(comparison_data, aes(x = Actual_Violent_Crime, y = Predicted_Violent_Crime)) +
+  geom_point(color = "green") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "red") +
+  labs(title = "Actual vs. Predicted Violent Crime",
+       x = "Actual Violent Crime",
+       y = "Predicted Violent Crime")
+
+```
+#USING LINEAR REGRESSION PREDICTING THE CRIME COUNT FOR WHOLE WEEK
+```{r}
+
+
+
+predict_for_date <- function(prediction_date, models, independent_vars, summarized_data) {
+  days_since_start <- as.numeric(difftime(prediction_date, min(summarized_data$Occurred_Date), units = "days"))
+  mean_values <- colMeans(subset(summarized_data, select = independent_vars), na.rm = TRUE)
+  mean_values['Days_Since_Start'] <- days_since_start
+  prediction_input <- as.data.frame(t(mean_values))
+  predicted_crime <- lapply(models, function(model) predict(model, newdata = prediction_input))
+  return(predicted_crime)
+}
+
+# Dates for prediction
+prediction_dates <- as.Date(c('2023-07-22', '2023-07-23', '2023-07-24', '2023-07-25', '2023-07-26', '2023-07-27', '2023-07-28', '2023-07-29', '2023-07-30'))
+
+# Loop over prediction dates and display predictions
+for (i in seq_along(prediction_dates)) {
+  formatted_date <- format(prediction_dates[i], "%Y-%m-%d")
+  cat("Predicted Sum_Serious_Crime on", formatted_date, ":", predict_for_date(prediction_dates[i], models, independent_vars, summarized_data)[[1]], "\n")
+  cat("Predicted Sum_Violent_Crime on", formatted_date, ":", predict_for_date(prediction_dates[i], models, independent_vars, summarized_data)[[2]], "\n")
+  cat("\n")
+}
+```
+#Random Forest Regression for Serious Crime Model
+```{r}
+library(randomForest)
+
+# Load necessary libraries
+library(readr)
+library(dplyr)
+library(lubridate)
+library(randomForest)
+library(caret)
+crime_data <- summarized_data
+
+# Set seed for reproducibility
+crime_data=summarized_data
+set.seed(42)
+
+# Calculate the size of the training set (80% of the dataset)
+training_size <- floor(0.8 * nrow(crime_data))
+
+# Randomly sample row indices for the training set
+training_indices <- sample(seq_len(nrow(crime_data)), size = training_size)
+
+# Create training and testing sets
+trainingSet <- crime_data[training_indices, ]
+testingSet <- crime_data[-training_indices, ]
+trainIndex <- createDataPartition(crime_data$Sum_Serious_Crime, p = 0.8, 
+                                  list = FALSE, 
+                                  times = 1)
+dataTrain <- crime_data[trainIndex, ]
+dataTest <- crime_data[-trainIndex, ]
+
+
+
+rf_model <- randomForest(Sum_Serious_Crime ~ Temp + Snow + Humidity + Precip + Was_Offense_Completed_Yes + Was_Offense_Completed_No + Days_Since_Start + Visibility, data = dataTrain, ntree = 100)
+rf_predictions <- predict(rf_model, newdata = dataTest)
+
+# Plotting
+
+ggplot(dataTest) +
+  geom_line(aes(x = Temp + Snow + Humidity + Precip + Was_Offense_Completed_Yes + Was_Offense_Completed_No + Days_Since_Start + Visibility, y = rf_predictions), color = "blue", linetype = "dashed") +
+  geom_line(aes(x = Temp + Snow + Humidity + Precip + Was_Offense_Completed_Yes + Was_Offense_Completed_No + Days_Since_Start + Visibility, y = dataTest$Sum_Serious_Crime), color = "black") +
+  labs(title = "Actual values vs Predicted values of Random Forest Regression model Serious Crime model", x = "Independent Variables", y = " Serious Crime Count") +
+  theme_minimal()
+
+
+rf_predictions <- predict(rf_model, testingSet)
+mse <- mean((rf_predictions - testingSet$Sum_Serious_Crime)^2)
+rsq <- cor(rf_predictions, testingSet$Sum_Serious_Crime)^2
+
+# Output the MSE and R-squared
+print(paste("Mean Squared Error:", mse))
+print(paste("R-squared:", rsq))
+```
+#Random Forest Regression for Violent Crime Model
+```{r}
+library(randomForest)
+
+# Load necessary libraries
+library(readr)
+library(dplyr)
+library(lubridate)
+library(randomForest)
+library(caret)
+crime_data <- summarized_data
+trainIndex <- createDataPartition(crime_data$Sum_Violent_Crime, p = 0.8, 
+                                  list = FALSE, 
+                                  times = 1)
+dataTrain <- crime_data[trainIndex, ]
+dataTest <- crime_data[-trainIndex, ]
+
+
+
+rf_model <- randomForest(Sum_Violent_Crime ~ Temp + Snow + Humidity + Precip + Was_Offense_Completed_Yes + Was_Offense_Completed_No + Days_Since_Start + Visibility, data = dataTrain, ntree = 100)
+rf_predictions <- predict(rf_model, newdata = dataTest)
+
+# Plotting
+
+ggplot(dataTest) +
+  geom_line(aes(x = Temp + Snow + Humidity + Precip + Was_Offense_Completed_Yes + Was_Offense_Completed_No + Days_Since_Start + Visibility, y = rf_predictions), color = "blue", linetype = "dashed") +
+  geom_line(aes(x = Temp + Snow + Humidity + Precip + Was_Offense_Completed_Yes + Was_Offense_Completed_No + Days_Since_Start + Visibility, y = dataTest$Sum_Violent_Crime), color = "black") +
+  labs(title = "Actual values vs Predicted values of Random Forest Regression model Violent Crime model", x = "Independent Variables", y = "Violent Crime Count") +
+  theme_minimal()
+
+
+rf_predictions <- predict(rf_model, testingSet)
+mse <- mean((rf_predictions - testingSet$Sum_Violent_Crime)^2)
+rsq <- cor(rf_predictions, testingSet$Sum_Violent_Crime)^2
+
+# Output the MSE and R-squared
+print(paste("Mean Squared Error:", mse))
+print(paste("R-squared:", rsq))
+```
+
+# Random Forest Model for Total Crime
+```{r}
+
+# Load necessary libraries
+library(readr)
+library(dplyr)
+library(lubridate)
+library(randomForest)
+library(caret)
+
+# Set seed for reproducibility
+crime_data=summarized_data
+set.seed(42)
+
+# Calculate the size of the training set (80% of the dataset)
+training_size <- floor(0.8 * nrow(crime_data))
+
+# Randomly sample row indices for the training set
+training_indices <- sample(seq_len(nrow(crime_data)), size = training_size)
+
+# Create training and testing sets
+trainingSet <- crime_data[training_indices, ]
+testingSet <- crime_data[-training_indices, ]
+
+
+# Ensure that Crime_Count and other predictors are numeric
+
+trainingSet$Temp <- as.numeric(trainingSet$Temp)
+trainingSet$Snow <- as.numeric(trainingSet$Snow)
+trainingSet$Humidity <- as.numeric(trainingSet$Humidity)
+trainingSet$Precip <- as.numeric(trainingSet$Precip)
+
+
+# Random Forest model training
+rf_model <- randomForest(Total_Crime ~Temp + Snow + Humidity + Precip+Was_Offense_Completed_Yes+Was_Offense_Completed_No+Days_Since_Start+Visibility, data = trainingSet, ntree = 100)
+
+# Model prediction and evaluation
+rf_predictions <- predict(rf_model, testingSet)
+mse <- mean((rf_predictions - testingSet$Total_Crime)^2)
+rsq <- cor(rf_predictions, testingSet$Total_Crime)^2
+
+# Output the MSE and R-squared
+print(paste("Mean Squared Error:", mse))
+print(paste("R-squared:", rsq))
+
+crime_data <- summarized_data
+trainIndex <- createDataPartition(crime_data$Total_Crime, p = 0.8, 
+                                  list = FALSE, 
+                                  times = 1)
+dataTrain <- crime_data[trainIndex, ]
+dataTest <- crime_data[-trainIndex, ]
+
+
+
+rf_model <- randomForest(Total_Crime ~ Temp + Snow + Humidity + Precip + Was_Offense_Completed_Yes + Was_Offense_Completed_No + Days_Since_Start + Visibility, data = dataTrain, ntree = 100)
+rf_predictions <- predict(rf_model, newdata = dataTest)
+
+# Plotting
+ggplot(dataTest) +
+  geom_line(aes(x = Temp + Snow + Humidity + Precip + Was_Offense_Completed_Yes + Was_Offense_Completed_No + Days_Since_Start + Visibility, y = Total_Crime), color = "black") +
+  labs(title = "Actual values of the dataset", x = "Independent Variables", y = "Actual Crime Count") +
+  theme_minimal()
+
+
+
+
+ggplot(dataTest) +
+  geom_line(aes(x = Temp + Snow + Humidity + Precip + Was_Offense_Completed_Yes + Was_Offense_Completed_No + Days_Since_Start + Visibility, y = rf_predictions), color = "blue", linetype = "dashed") +
+  geom_line(aes(x = Temp + Snow + Humidity + Precip + Was_Offense_Completed_Yes + Was_Offense_Completed_No + Days_Since_Start + Visibility, y = dataTest$Total_Crime), color = "black") +
+  labs(title = "Actual values vs Predicted values of Random Forest Regression  Total Crime model", x = "Independent Var", y = "Crime Count") +
+  theme_minimal()
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#
+```{r}
+#install.packages("knitr")
+library(forecast)
+library(tibble)
+
+# Load the dataset
+data <- sarimadf
+
+# Load required libraries
+library(readr)
+library(forecast)
+library(dplyr)
+library(knitr)
+
+
+data$Occurred_Date <- as.Date(data$Occurred_Date)
+
+# Set the index to Occurred_Date
+data <- data %>% 
+  as_tibble() %>%
+  mutate(Occurred_Date = lubridate::ymd(Occurred_Date)) %>%
+  select(Occurred_Date, Total_Crime) %>%
+  arrange(Occurred_Date)
+
+# Splitting the dataset into training and testing sets
+train_end <- as.Date('2023-07-21')
+test_start <- as.Date('2023-07-22')
+test_end <- as.Date('2023-07-30')
+
+train_data <- data %>%
+  filter(Occurred_Date <= train_end) %>%
+  pull(Total_Crime)
+
+test_data <- data %>%
+  filter(Occurred_Date >= test_start & Occurred_Date <= test_end) %>%
+  pull(Total_Crime)
+
+# Fitting the SARIMA model with the specified parameters (1, 1, 2)(1, 1, 1, 7)
+model <- forecast::Arima(train_data, order=c(1, 1, 2), seasonal=c(1, 1, 1, 7))
+
+# Forecasting the Total Crime from July 22, 2023, to July 30, 2023
+forecast_values <- forecast::forecast(model, h = length(test_data))
+forecast_df <- data.frame(
+  Date = seq(test_start, test_end, by = "days"),
+  Forecast = as.numeric(forecast_values$mean),
+  Lower_CI = as.numeric(forecast_values$lower),
+  Upper_CI = as.numeric(forecast_values$upper),
+  check.names = FALSE
+)
+
+# Creating a DataFrame for visualization
+comparison_df <- data.frame(
+  Date = seq(test_start, test_end, by = "days"),
+  Actual = test_data,
+  Forecasted = forecast_df$Forecast
+)
+
+# Plotting the forecasts along with the actual data
+library(ggplot2)
+
+plot <- ggplot(comparison_df, aes(x = Date)) +
+  geom_line(aes(y = Actual), color = 'blue', linetype = 'solid', size = 1, label = "Actual") +
+  geom_line(aes(y = Forecasted), color = 'green', linetype = 'solid', size = 1, label = "Forecasted") +
+  labs(title = 'Total Crime Forecast vs Actuals', x = 'Date', y = 'Total Crime') +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+
+table_df <- data.frame(
+  Date = comparison_df$Date,
+  Actual = comparison_df$Actual,
+  Predicted = comparison_df$Forecasted
+)
+
+# Display the table
+knitr::kable(table_df, caption = "Actual vs Predicted Values")
+
+# Display the plot
+print(plot)
+```
+
+
+#Time series Decomposition
+
+```{r}
+# Load necessary libraries
+
+library(ggplot2)
+
+# Assuming your dataset is already loaded as 'tc' and 'Total_Crime' is the target variable
+
+data <- sarimadf
+
+# Convert 'Occurred_Date' to Date if it's not already in Date format
+data$Occurred_Date <- as.Date(data$Occurred_Date)
+
+# Create a time series object
+crime_ts <- ts(data$Total_Crime, frequency = 12)  # Assuming daily data
+
+# Perform time series decomposition
+decomposition <- decompose(crime_ts)
+
+# Plot the decomposition
+plot(decomposition)
+
+# Plot individual components using ggplot2
+ggplot() +
+  geom_line(aes(x = data$Occurred_Date, y = decomposition$seasonal), color = 'blue', linetype = 'solid', size = 1, label = "Seasonal") +
+  geom_line(aes(x = data$Occurred_Date, y = decomposition$trend), color = 'red', linetype = 'solid', size = 1, label = "Trend") +
+  geom_line(aes(x = data$Occurred_Date, y = decomposition$random), color = 'green', linetype = 'solid', size = 1, label = "Residual") +
+  geom_line(aes(x = data$Occurred_Date, y = data$Total_Crime), color = 'black', linetype = 'solid', size = 1, label = "Original") +
+  labs(title = 'Time Series Decomposition of Total Crime', x = 'Date', y = 'Total Crime') +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+```
+
+
+#ARIMA analysis for whole dataset
+```{r}
+# Load libraries
+library(forecast)
+library(tibble)
+library(lubridate)
+library(ggplot2)
+library(dplyr)
+library(kableExtra)
+
+# Load the dataset
+data <- sarimadf
+data$Occurred_Date <- as.Date(data$Occurred_Date)
+
+# Set the index to Occurred_Date
+data <- data %>%
+  mutate(Occurred_Date = lubridate::ymd(Occurred_Date)) %>%
+  select(Occurred_Date, Total_Crime, Temp) %>%
+  arrange(Occurred_Date)
+
+# Splitting the dataset into training and testing sets
+train_end <- as.Date('2023-07-21')
+test_start <- as.Date('2023-07-22')
+test_end <- as.Date('2023-07-30')
+
+train_data <- data %>%
+  filter(Occurred_Date <= train_end) %>%
+  select(Total_Crime, Temp)
+
+test_data <- data %>%
+  filter(Occurred_Date %in% seq(test_start, test_end, by = "days")) %>%
+  select(Total_Crime, Temp)
+
+# Fitting the ARIMA model with the specified parameters (1, 1, 2)
+model <- forecast::Arima(train_data$Total_Crime, order=c(1, 1, 2), xreg = train_data$Temp)
+
+# Forecasting
+forecast_values <- forecast::forecast(model, h = nrow(test_data), xreg = test_data$Temp)
+
+# Create DataFrames
+forecast_df <- data.frame(
+  Date = seq(test_start, test_end, by = "days"),
+  Forecast = as.numeric(forecast_values$mean),
+  Lower_CI = as.numeric(forecast_values$lower),
+  Upper_CI = as.numeric(forecast_values$upper),
+  check.names = FALSE
+)
+
+comparison_df <- data.frame(
+  Date = forecast_df$Date,
+  Actual = test_data$Total_Crime,
+  Forecasted = forecast_df$Forecast
+)
+
+# Plotting
+plot <- ggplot(comparison_df, aes(x = Date)) +
+  geom_line(aes(y = Actual, color = 'Actual'), linetype = 'solid', size = 1) +
+  geom_line(aes(y = Forecasted, color = 'Predicted'), linetype = 'solid', size = 1) +
+  labs(title = 'Total Crime Forecast vs Actuals', x = 'Date', y = 'Total Crime') +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  scale_color_manual(values = c('Actual' = 'blue', 'Predicted' = 'green')) +
+  guides(color = guide_legend(title = "Legend", override.aes = list(linetype = 'solid', size = 2)))
+
+# Display the plot
+print(plot)
+
+# Create a table with actual and predicted values
+table_df <- data.frame(
+  Date = comparison_df$Date,
+  Actual = comparison_df$Actual,
+  Predicted = comparison_df$Forecasted
+)
+
+# Display the table with kableExtra for better formatting
+table <- kable(table_df, caption = "Actual vs Predicted Values", format = "html") %>%
+  kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+
+
+
+# Print the table
+table
+
+
+```
+
+
+
+
+#ARIMA analysis for Beat411
+```{r}
+library(forecast)
+library(tibble)
+library(lubridate)
+library(ggplot2)
+library(dplyr)
+
+# Load the dataset
+data <- Beat411
+
+data$Occurred_Date <- as.Date(data$Occurred_Date)
+
+# Set the index to Occurred_Date
+data <- data %>%
+  as_tibble() %>%
+  mutate(Occurred_Date = lubridate::ymd(Occurred_Date)) %>%
+  select(Occurred_Date, Total_Crime, Temp) %>%  # Use the correct column name (Temp)
+  arrange(Occurred_Date)
+
+# Splitting the dataset into training and testing sets
+train_end <- as.Date('2023-07-21')
+test_start <- as.Date('2023-07-22')
+test_end <- as.Date('2023-07-30')
+
+train_data <- data %>%
+  filter(Occurred_Date <= train_end) %>%
+  select(Total_Crime, Temp)  # Use the correct column name (Temp)
+
+test_data <- data %>%
+  filter(Occurred_Date >= test_start & Occurred_Date <= test_end) %>%
+  select(Total_Crime, Temp)  # Use the correct column name (Temp)
+
+# Fitting the ARIMA model with the specified parameters (1, 1, 2)
+model <- forecast::Arima(train_data$Total_Crime, order=c(1, 1, 2), xreg = train_data$Temp)
+
+# Print the summary of the ARIMA model
+cat("ARIMA Model Summary:\n")
+print(summary(model))
+
+# Forecasting the Total Crime from July 22, 2023, to July 30, 2023
+forecast_values <- forecast::forecast(model, h = nrow(test_data), xreg = test_data$Temp)
+forecast_df <- data.frame(
+  Date = seq(test_start, test_end, by = "days"),
+  Forecast = as.numeric(forecast_values$mean),
+  Lower_CI = as.numeric(forecast_values$lower),
+  Upper_CI = as.numeric(forecast_values$upper),
+  check.names = FALSE
+)
+
+# Creating a DataFrame for visualization
+comparison_df <- data.frame(
+  Date = seq(test_start, test_end, by = "days"),
+  Actual = test_data$Total_Crime,
+  Forecasted = forecast_df$Forecast
+)
+
+# Plotting the forecasts along with the actual data
+plot <- ggplot(comparison_df, aes(x = Date)) +
+  geom_line(aes(y = Actual, color = 'Actual'), linetype = 'solid', size = 1) +
+  geom_line(aes(y = Forecasted, color = 'Predicted'), linetype = 'solid', size = 1) +
+  labs(title = 'Total Crime Forecast vs Actuals', x = 'Date', y = 'Total Crime') +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  scale_color_manual(values = c('Actual' = 'blue', 'Predicted' = 'green')) +
+  guides(color = guide_legend(title = "Legend", override.aes = list(linetype = 'solid', size = 2)))
+
+# Display the plot
+print(plot)
+
+
+
+# Load the kableExtra library
+library(kableExtra)
+
+# Create a table with actual and predicted values
+table_df <- data.frame(
+  Date = comparison_df$Date,
+  Actual = comparison_df$Actual,
+  Predicted = comparison_df$Forecasted
+)
+
+# Display the table with kableExtra for better formatting
+table <- kable(table_df, caption = "Actual vs Predicted Values", format = "html") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+
+# Print the formatted table
+print(table)
+
+```
+
+
