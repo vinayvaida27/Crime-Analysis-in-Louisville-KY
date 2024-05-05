@@ -28,3 +28,6 @@ By combining these datasets and conducting advanced statistical analysis, this
 research seeks to provide valuable insights into the dynamics of serious crime in
 Louisville, offering a foundation for evidence-based policy decisions and community
 safety initiatives
+
+![image](https://github.com/vinayvaida27/Crime-Analysis-in-Louisville-KY/assets/115647297/c502484d-51d9-4c5f-8372-9ad74a156b90)
+
