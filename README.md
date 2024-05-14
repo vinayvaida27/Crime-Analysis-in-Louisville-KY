@@ -55,9 +55,6 @@ We classify crime data into 'Serious' and 'Violent' categories, enabling focused
 
 Contributions to enhance the analysis or predictive models are welcome. Please fork the repository, make your changes, and submit a pull request.
 
-## License
-
-This project is licensed under the MIT License - see the LICENSE.md file for details.
 
 
 ![image](https://github.com/vinayvaida27/Crime-Analysis-in-Louisville-KY/assets/115647297/c502484d-51d9-4c5f-8372-9ad74a156b90)
